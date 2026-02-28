@@ -18,6 +18,8 @@ function shuffle<T>(arr: T[]): T[] {
 export default function BlackWhitePage() {
   const [phase, setPhase] = useState<"rps" | "game" | "result">("rps");
   const [rpsResult, setRpsResult] = useState<"win" | "lose" | "draw" | null>(null);
+  const [userRpsChoice, setUserRpsChoice] = useState<RPS | null>(null);
+  const [cpuRpsChoice, setCpuRpsChoice] = useState<RPS | null>(null);
   const [userFirst, setUserFirst] = useState(true);
 
   const [userTiles, setUserTiles] = useState<Tile[]>([]);
@@ -42,6 +44,8 @@ export default function BlackWhitePage() {
   const startRps = useCallback(() => {
     setPhase("rps");
     setRpsResult(null);
+    setUserRpsChoice(null);
+    setCpuRpsChoice(null);
   }, []);
 
   const playRps = useCallback((user: RPS) => {
@@ -50,6 +54,8 @@ export default function BlackWhitePage() {
     let result: "win" | "lose" | "draw" = "draw";
     if (wins[user] === cpu) result = "win";
     else if (wins[cpu] === user) result = "lose";
+    setUserRpsChoice(user);
+    setCpuRpsChoice(cpu);
     setRpsResult(result);
     setUserFirst(result === "win" || (result === "draw" && Math.random() > 0.5));
   }, []);
@@ -199,17 +205,47 @@ export default function BlackWhitePage() {
           </div>
         ) : (
           <div className="text-center">
-            <p className="text-xl mb-4">
-              {rpsResult === "win" && "당신이 선입니다!"}
-              {rpsResult === "lose" && "컴퓨터가 선입니다!"}
-              {rpsResult === "draw" && "무승부! 다시 정해집니다."}
+            <p className="text-sm text-zinc-500 mb-2">가위바위보 결과</p>
+            <div className="flex justify-center gap-6 mb-4">
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">당신</p>
+                <p className="text-xl font-semibold">{userRpsChoice}</p>
+              </div>
+              <span className="text-zinc-600 self-center">vs</span>
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">컴퓨터</p>
+                <p className="text-xl font-semibold">{cpuRpsChoice}</p>
+              </div>
+            </div>
+            <p className="text-xl font-bold mb-2">
+              {rpsResult === "win" && "승리!"}
+              {rpsResult === "lose" && "패배!"}
+              {rpsResult === "draw" && "무승부!"}
             </p>
-            <button
-              onClick={startGame}
-              className="px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
-            >
-              게임 시작
-            </button>
+            <p className="text-zinc-400 text-sm mb-6">
+              {rpsResult === "win" && "당신이 선입니다."}
+              {rpsResult === "lose" && "컴퓨터가 선입니다."}
+              {rpsResult === "draw" && "선을 다시 정합니다. 가위바위보를 다시 하세요."}
+            </p>
+            {rpsResult === "draw" ? (
+              <button
+                onClick={() => {
+                  setRpsResult(null);
+                  setUserRpsChoice(null);
+                  setCpuRpsChoice(null);
+                }}
+                className="px-6 py-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white"
+              >
+                가위바위보 다시 하기
+              </button>
+            ) : (
+              <button
+                onClick={startGame}
+                className="px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
+              >
+                게임 시작
+              </button>
+            )}
           </div>
         )}
       </main>
