@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 로비: 접속 중인 사용자 목록 (읽기/쓰기 허용)
+    match /lobby/{userId} {
+      allow read, write: if true;
+    }
+    // 게임 방: 2인 대전 매칭 및 게임 상태 (읽기/쓰기 허용)
+    match /games/{gameId} {
+      allow read, write: if true;
+    }
+  }
+}

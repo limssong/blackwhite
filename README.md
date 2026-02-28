@@ -1,10 +1,12 @@
 # 흑과백 (Black & White)
 
-**더 지니어스** 데스매치로 소개된 1:1 숫자 타일 대결 게임입니다.  
-접속한 유저와 컴퓨터가 대결하는 형태로 플레이할 수 있습니다.
+**더 지니어스** 데스매치로 소개된 1:1 숫자 타일 대결 게임입니다.
+
+- **1인용**: 사람 vs 컴퓨터
+- **2인용**: 같은 페이지에 접속한 상대와 실시간 대전 (Firebase 필요)
 
 - **플레이**: [GitHub Pages에서 실행](https://limssong.github.io/blackwhite/)
-- **기술 스택**: React, Next.js, [shadcn/ui](https://ui.shadcn.com/), Tailwind CSS, TypeScript
+- **기술 스택**: React, Next.js, [shadcn/ui](https://ui.shadcn.com/), Tailwind CSS, TypeScript, Firebase (2인용)
 
 ---
 
@@ -58,6 +60,61 @@ pnpm lint
 
 ---
 
+## 사람 vs 사람 (2인 대전)
+
+2인용 모드를 사용하려면 **Firebase** 프로젝트가 필요합니다.
+
+1. [Firebase Console](https://console.firebase.google.com/)에서 프로젝트 생성
+2. **Firestore Database** 생성 (테스트 모드로 시작 가능)
+3. **설정 → 일반 → 앱**에서 웹 앱 추가 후 나온 설정값 복사
+4. 프로젝트 루트에 `.env.local` 생성 후 아래 변수 채우기 (`.env.example` 참고)
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+```
+
+5. **사람 vs 사람** 선택 시 로비에 접속되며, **현재 접속 중인 사용자 목록(IP)**이 표시됩니다.  
+   (IP는 [ipify](https://www.ipify.org/) API로 조회됩니다.)
+6. **Firestore 보안 규칙** 설정 (아래 참고).
+
+---
+
+## Firestore 보안 규칙 설정
+
+`lobby`, `games`는 **앱이 사용하는 컬렉션 이름**이라, 앱에서 로비/게임을 한 번이라도 사용하기 전에는 Firebase 콘솔 **데이터** 탭에 안 보입니다. 규칙만 먼저 설정하면 됩니다.
+
+1. [Firebase Console](https://console.firebase.google.com/) → 프로젝트 선택
+2. 왼쪽 메뉴에서 **Firestore Database** 클릭
+3. 상단에서 **규칙** 탭 클릭 (데이터 탭이 아님)
+4. 기존 내용을 지우고 **아래 회색 박스 안의 글만** 복사해서 붙여넣기 (줄 번호나 ``` 기호는 복사하지 마세요). 그다음 **게시** 클릭.
+
+```
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /lobby/{userId} {
+      allow read, write: if true;
+    }
+    match /games/{gameId} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+- 이 규칙은 **개발/테스트용**으로, 누구나 `lobby`, `games`를 읽고 쓸 수 있습니다.
+- 나중에 인증(로그인)을 붙이면 `if request.auth != null` 등으로 제한할 수 있습니다.
+
+프로젝트 루트의 `firestore.rules` 파일에도 같은 내용이 있습니다.
+
+---
+
 ## GitHub Pages 배포
 
 - 저장소 **Settings → Pages**에서  
@@ -79,7 +136,10 @@ blackwhite/
 │   │   ├── page.tsx               # 흑과백 게임 메인 페이지
 │   │   └── globals.css
 │   └── lib/
-│       └── utils.ts              # 타일 유틸 (흑/백 판별 등)
+│       ├── utils.ts              # 타일 유틸 (흑/백 판별 등)
+│       ├── firebase.ts           # Firebase 초기화
+│       ├── useLobby.ts           # 2인용 로비 (접속자 목록)
+│       └── pvpGame.ts           # 2인용 매칭/게임 상태
 ├── next.config.mjs               # static export, basePath for GitHub Pages
 ├── package.json                  # packageManager: "pnpm@9.15.0"
 ├── tailwind.config.ts

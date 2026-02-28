@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { cn, TILES, type Tile, getTileColor } from "@/lib/utils";
+import { useLobby } from "@/lib/useLobby";
+import { createWaitingGame, findWaitingGame, joinGame, subscribeToGame, type PvpGameDoc } from "@/lib/pvpGame";
 
 type RPS = "가위" | "바위" | "보";
 const RPS_OPTIONS: RPS[] = ["가위", "바위", "보"];
+
+type GameMode = null | "pve" | "pvp";
+type Phase = "mode" | "rps" | "game" | "result" | "pvpLobby" | "pvpGame";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -16,7 +21,8 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function BlackWhitePage() {
-  const [phase, setPhase] = useState<"rps" | "game" | "result">("rps");
+  const [phase, setPhase] = useState<Phase>("mode");
+  const [gameMode, setGameMode] = useState<GameMode>(null);
   const [rpsResult, setRpsResult] = useState<"win" | "lose" | "draw" | null>(null);
   const [userRpsChoice, setUserRpsChoice] = useState<RPS | null>(null);
   const [cpuRpsChoice, setCpuRpsChoice] = useState<RPS | null>(null);
@@ -47,6 +53,51 @@ export default function BlackWhitePage() {
     setUserRpsChoice(null);
     setCpuRpsChoice(null);
   }, []);
+
+  const goToModeSelect = useCallback(() => {
+    setPhase("mode");
+    setGameMode(null);
+  }, []);
+
+  const lobby = useLobby();
+  const [pvpGameId, setPvpGameId] = useState<string | null>(null);
+  const [pvpGameData, setPvpGameData] = useState<PvpGameDoc | null>(null);
+  const [pvpMatchLoading, setPvpMatchLoading] = useState(false);
+
+  useEffect(() => {
+    if (phase !== "pvpLobby") return;
+    lobby.enterLobby();
+    return () => lobby.leaveLobby();
+  }, [phase]);
+
+  const handlePvpCreateOrJoin = useCallback(async () => {
+    if (!lobby.myId || !lobby.myIp) return;
+    setPvpMatchLoading(true);
+    try {
+      const existingGameId = await findWaitingGame(lobby.myId);
+      if (existingGameId) {
+        const ok = await joinGame(existingGameId, lobby.myId, lobby.myIp!);
+        if (ok) {
+          setPvpGameId(existingGameId);
+          setPhase("pvpGame");
+        }
+      } else {
+        const gameId = await createWaitingGame(lobby.myId, lobby.myIp);
+        if (gameId) {
+          setPvpGameId(gameId);
+          setPhase("pvpGame");
+        }
+      }
+    } finally {
+      setPvpMatchLoading(false);
+    }
+  }, [lobby.myId, lobby.myIp]);
+
+  useEffect(() => {
+    if (phase !== "pvpGame" || !pvpGameId) return;
+    const unsub = subscribeToGame(pvpGameId, (data) => setPvpGameData(data));
+    return unsub;
+  }, [phase, pvpGameId]);
 
   const playRps = useCallback((user: RPS) => {
     const cpu: RPS = RPS_OPTIONS[Math.floor(Math.random() * 3)];
@@ -186,9 +237,108 @@ export default function BlackWhitePage() {
     [cpuFirstTile, roundPhase, userUsed, cpuUsed]
   );
 
-  if (phase === "rps") {
+  if (phase === "mode") {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100">
+        <h1 className="text-3xl font-bold mb-2">흑과백</h1>
+        <p className="text-zinc-400 mb-10">플레이 모드를 선택하세요.</p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={() => { setGameMode("pve"); setPhase("rps"); }}
+            className="px-8 py-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-lg font-medium"
+          >
+            1. 사람 vs 컴퓨터
+          </button>
+          <button
+            onClick={() => { setGameMode("pvp"); setPhase("pvpLobby"); }}
+            className="px-8 py-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-lg font-medium"
+          >
+            2. 사람 vs 사람
+          </button>
+        </div>
+        <p className="text-zinc-500 text-sm mt-6">동시에 접속한 상대와 대전할 수 있습니다.</p>
+      </main>
+    );
+  }
+
+  if (phase === "pvpLobby") {
+    return (
+      <main className="min-h-screen flex flex-col p-6 bg-zinc-950 text-zinc-100">
+        <div className="max-w-lg mx-auto w-full">
+          <h1 className="text-2xl font-bold text-center mb-2">흑과백 · 사람 vs 사람</h1>
+          <p className="text-zinc-400 text-center text-sm mb-6">현재 접속 중인 사용자와 매칭됩니다.</p>
+          <button
+            onClick={goToModeSelect}
+            className="text-zinc-500 text-sm mb-4 hover:underline"
+          >
+            ← 모드 선택으로
+          </button>
+          {!lobby.isConfigured && (
+            <div className="rounded-lg bg-amber-900/30 border border-amber-600/50 p-4 mb-6 text-amber-200 text-sm">
+              Firebase 설정이 필요합니다. README의 환경 변수(NEXT_PUBLIC_FIREBASE_*)를 설정해 주세요.
+            </div>
+          )}
+          {lobby.error && (
+            <p className="text-red-400 text-sm mb-4">{lobby.error}</p>
+          )}
+          <div className="rounded-lg bg-zinc-800/50 border border-zinc-600 p-4 mb-6">
+            <p className="text-zinc-400 text-sm mb-2">현재 접속 중인 사용자 (IP)</p>
+            {lobby.loading ? (
+              <p className="text-zinc-500 text-sm">로비 접속 중...</p>
+            ) : (
+              <ul className="space-y-1">
+                {lobby.onlineUsers.length === 0 ? (
+                  <li className="text-zinc-500 text-sm">접속 중인 사용자가 없습니다.</li>
+                ) : (
+                  lobby.onlineUsers.map((u) => (
+                    <li key={u.id} className="flex items-center gap-2 text-sm">
+                      <span className="font-mono text-zinc-300">{u.ip}</span>
+                      {u.id === lobby.myId && <span className="text-zinc-500 text-xs">(나)</span>}
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+          </div>
+          <button
+            onClick={handlePvpCreateOrJoin}
+            disabled={!lobby.isConfigured || lobby.loading || pvpMatchLoading}
+            className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-medium"
+          >
+            {pvpMatchLoading ? "매칭 중..." : "상대 찾기 / 방 만들기"}
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === "pvpGame") {
+    const status = pvpGameData?.status ?? "waiting";
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100">
+        <h1 className="text-2xl font-bold mb-4">사람 vs 사람</h1>
+        {status === "waiting" && (
+          <p className="text-zinc-400 mb-6">상대를 기다리는 중...</p>
+        )}
+        {status === "playing" && (
+          <p className="text-zinc-400 mb-6">게임 진행 중 (동기화 준비 중)</p>
+        )}
+        <button
+          onClick={() => { setPhase("pvpLobby"); setPvpGameId(null); setPvpGameData(null); }}
+          className="px-6 py-3 rounded-lg bg-zinc-700 hover:bg-zinc-600"
+        >
+          로비로 돌아가기
+        </button>
+      </main>
+    );
+  }
+
+  if (phase === "rps") {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100 relative">
+        <button onClick={goToModeSelect} className="absolute top-4 left-4 text-zinc-500 text-sm hover:underline">
+          ← 모드 선택
+        </button>
         <h1 className="text-3xl font-bold mb-2">흑과백</h1>
         <p className="text-zinc-400 mb-8">선을 정하기 위해 가위바위보를 하세요.</p>
         {rpsResult === null ? (
