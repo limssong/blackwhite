@@ -3,7 +3,18 @@
 import { useState, useCallback, useEffect } from "react";
 import { cn, TILES, type Tile, getTileColor } from "@/lib/utils";
 import { useLobby } from "@/lib/useLobby";
-import { createWaitingGame, findWaitingGame, joinGame, subscribeToGame, type PvpGameDoc } from "@/lib/pvpGame";
+import {
+  createWaitingGame,
+  findWaitingGame,
+  joinGame,
+  subscribeToGame,
+  updateGameState,
+  startPvpGame,
+  applyPvpTileSelect,
+  applyPvpNextRound,
+  type PvpGameDoc,
+  type PvpGameState,
+} from "@/lib/pvpGame";
 
 type RPS = "가위" | "바위" | "보";
 const RPS_OPTIONS: RPS[] = ["가위", "바위", "보"];
@@ -314,15 +325,212 @@ export default function BlackWhitePage() {
 
   if (phase === "pvpGame") {
     const status = pvpGameData?.status ?? "waiting";
+    const state = pvpGameData?.state;
+    const isPlayer1 = !!pvpGameData && !!lobby.myId && pvpGameData.player1Id === lobby.myId;
+
+    if (status === "waiting") {
+      return (
+        <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100">
+          <h1 className="text-2xl font-bold mb-4">사람 vs 사람</h1>
+          <p className="text-zinc-400 mb-6">상대를 기다리는 중...</p>
+          <button
+            onClick={() => { setPhase("pvpLobby"); setPvpGameId(null); setPvpGameData(null); }}
+            className="px-6 py-3 rounded-lg bg-zinc-700 hover:bg-zinc-600"
+          >
+            로비로 돌아가기
+          </button>
+        </main>
+      );
+    }
+
+    if (status === "playing" && state && pvpGameId) {
+      const myTiles = (isPlayer1 ? state.player1Tiles : state.player2Tiles).filter(
+        (t) => !(isPlayer1 ? state.player1Used : state.player2Used).includes(t)
+      );
+      const myScore = isPlayer1 ? state.player1Score : state.player2Score;
+      const oppScore = isPlayer1 ? state.player2Score : state.player1Score;
+      const mySelected = isPlayer1 ? state.player1Selected : state.player2Selected;
+      const oppSelected = isPlayer1 ? state.player2Selected : state.player1Selected;
+      const myPlayedTiles = isPlayer1 ? state.player1PlayedTiles : state.player2PlayedTiles;
+      const oppPlayedColors = isPlayer1 ? state.player2PlayedColors : state.player1PlayedTiles.map((t) => getTileColor(t as Tile));
+      const roundResultsForMe = state.roundResults.map((r) =>
+        r === "draw" ? "draw" : r === (isPlayer1 ? "player1" : "player2") ? "win" : "lose"
+      );
+      const isFirstThisRound = state.firstPlayerThisRound === (isPlayer1 ? "player1" : "player2");
+      const firstHasSelected = state.firstPlayerThisRound
+        ? (state.firstPlayerThisRound === "player1" ? state.player1Selected : state.player2Selected) !== null
+        : false;
+      const myTurn =
+        state.roundPhase === "select" &&
+        (isFirstThisRound ? mySelected === null : firstHasSelected && mySelected === null);
+
+      const handleStartGame = () => {
+        const next = startPvpGame(state);
+        updateGameState(pvpGameId, next);
+      };
+
+      const handleSelectTile = (tile: number) => {
+        if (!myTurn || state.roundPhase !== "select") return;
+        const player = isPlayer1 ? "player1" : "player2";
+        const next = applyPvpTileSelect(state, player, tile);
+        updateGameState(pvpGameId, next);
+      };
+
+      const handleNextRound = () => {
+        const next = applyPvpNextRound(state);
+        updateGameState(pvpGameId, next);
+      };
+
+      if (state.winner) {
+        const iWon = state.winner === (isPlayer1 ? "player1" : "player2");
+        return (
+          <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100">
+            <h1 className="text-2xl font-bold mb-4">{iWon ? "승리!" : "패배!"}</h1>
+            <p className="text-zinc-400 mb-2">최종 스코어 {myScore} : {oppScore}</p>
+            <button
+              onClick={() => { setPhase("pvpLobby"); setPvpGameId(null); setPvpGameData(null); }}
+              className="mt-4 px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500"
+            >
+              로비로 돌아가기
+            </button>
+          </main>
+        );
+      }
+
+      return (
+        <main className="min-h-screen flex flex-col p-6 bg-zinc-950 text-zinc-100">
+          <div className="max-w-2xl mx-auto w-full">
+            <h1 className="text-2xl font-bold text-center mb-2">사람 vs 사람</h1>
+            {state.suddenDeath && <p className="text-center text-amber-400 mb-2 text-sm">연장전</p>}
+            <p className="text-center text-zinc-500 text-sm mb-4">라운드 {state.round + 1}/9</p>
+
+            {state.roundPhase === "ready" && (
+              <div className="text-center mb-6">
+                <p className="text-zinc-400 text-sm mb-3">게임 시작 버튼을 누르면 선이 정해지고 시작합니다.</p>
+                <button
+                  onClick={handleStartGame}
+                  className="px-8 py-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                >
+                  게임 시작
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <p className="text-lg font-semibold mb-2">나: {myScore}점</p>
+                <p className="text-xs text-zinc-500 mb-1">내 타일</p>
+                <div className="flex flex-wrap gap-2">
+                  {myTiles.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => handleSelectTile(t)}
+                      disabled={state.roundPhase !== "select" || !myTurn}
+                      className={cn(
+                        "w-12 h-12 rounded-lg border-2 font-bold flex items-center justify-center",
+                        getTileColor(t as Tile) === "black" ? "bg-zinc-800 text-zinc-100 border-zinc-600" : "bg-zinc-200 text-zinc-800 border-zinc-400",
+                        (!myTurn || state.roundPhase !== "select") && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2">
+                  <p className="text-xs text-zinc-500 mb-1">선택한 타일</p>
+                  {mySelected !== null ? (
+                    <span className={cn(
+                      "inline-flex w-10 h-10 rounded-lg border-2 font-bold text-sm items-center justify-center",
+                      getTileColor(mySelected as Tile) === "black" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-200 text-zinc-800"
+                    )}>{mySelected}</span>
+                  ) : (
+                    <span className="text-zinc-500 text-sm">?</span>
+                  )}
+                </div>
+                {myPlayedTiles.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-zinc-500 mb-1">내가 낸 타일 (라운드별)</p>
+                    <div className="flex flex-wrap gap-1">
+                      {myPlayedTiles.map((t, i) => (
+                        <span key={i} className="flex flex-col items-center">
+                          <span className={cn(
+                            "w-8 h-8 rounded border flex items-center justify-center text-xs font-bold",
+                            getTileColor(t as Tile) === "black" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-200 text-zinc-800"
+                          )}>{t}</span>
+                          {roundResultsForMe[i] !== undefined && (
+                            <span className={cn("text-[10px]", roundResultsForMe[i] === "win" && "text-green-500", roundResultsForMe[i] === "lose" && "text-red-500")}>
+                              {roundResultsForMe[i] === "win" && "승리"}
+                              {roundResultsForMe[i] === "lose" && "패배"}
+                              {roundResultsForMe[i] === "draw" && "무"}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-lg font-semibold mb-2">상대: {oppScore}점</p>
+                <p className="text-xs text-zinc-500 mb-1">상대 타일 (유추)</p>
+                <div className="flex flex-wrap gap-1">
+                  {state.roundPhase === "select" && !firstHasSelected && (
+                    <span className="text-zinc-500 text-sm">선이 타일 선택 중...</span>
+                  )}
+                  {state.roundPhase !== "select" && oppSelected !== null && (
+                    <span className={cn(
+                      "w-10 h-10 rounded-lg border-2 flex items-center justify-center text-sm font-bold",
+                      getTileColor(oppSelected as Tile) === "black" ? "bg-zinc-800" : "bg-zinc-200 text-zinc-800"
+                    )}>{getTileColor(oppSelected as Tile) === "black" ? "흑" : "백"}</span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <p className="text-xs text-zinc-500 mb-1">상대가 낸 타일 (라운드별)</p>
+                  <div className="flex flex-wrap gap-1">
+                    {oppPlayedColors.map((c, i) => (
+                      <span key={i} className={cn(
+                        "w-8 h-8 rounded border flex items-center justify-center text-xs",
+                        c === "black" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-200 text-zinc-800"
+                      )}>{c === "black" ? "흑" : "백"}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {state.roundPhase === "done" && state.roundResult !== null && (
+              <div className="text-center mb-4">
+                <p className="font-bold">
+                  {state.roundResult === (isPlayer1 ? "player1" : "player2") ? "이번 라운드 승리!" : state.roundResult === "draw" ? "무승부" : "이번 라운드 패배..."}
+                </p>
+                <button onClick={handleNextRound} className="mt-3 px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium">
+                  다음 라운드
+                </button>
+              </div>
+            )}
+
+            {state.roundPhase === "select" && (
+              <p className="text-center text-zinc-500 text-sm">
+                {myTurn ? "당신이 타일을 선택하세요." : "상대 차례입니다."}
+              </p>
+            )}
+
+            <button
+              onClick={() => { setPhase("pvpLobby"); setPvpGameId(null); setPvpGameData(null); }}
+              className="mt-6 block mx-auto text-zinc-500 text-sm hover:underline"
+            >
+              로비로 돌아가기
+            </button>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100">
         <h1 className="text-2xl font-bold mb-4">사람 vs 사람</h1>
-        {status === "waiting" && (
-          <p className="text-zinc-400 mb-6">상대를 기다리는 중...</p>
-        )}
-        {status === "playing" && (
-          <p className="text-zinc-400 mb-6">게임 진행 중 (동기화 준비 중)</p>
-        )}
+        <p className="text-zinc-400 mb-6">로딩 중...</p>
         <button
           onClick={() => { setPhase("pvpLobby"); setPvpGameId(null); setPvpGameData(null); }}
           className="px-6 py-3 rounded-lg bg-zinc-700 hover:bg-zinc-600"
