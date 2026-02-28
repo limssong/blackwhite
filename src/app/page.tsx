@@ -116,9 +116,7 @@ export default function BlackWhitePage() {
     const nextFirst = roundResult === "win" ? true : roundResult === "lose" ? false : isUserTurn;
     setIsUserTurn(nextFirst);
 
-    const newUserScore = userScore + (roundResult === "win" ? 1 : 0);
-    const newCpuScore = cpuScore + (roundResult === "lose" ? 1 : 0);
-    if (newUserScore >= 5 || newCpuScore >= 5) {
+    if (userScore >= 5 || cpuScore >= 5) {
       setGameOver(true);
       setPhase("result");
       return;
@@ -209,27 +207,6 @@ export default function BlackWhitePage() {
             </button>
           </div>
         )}
-      </main>
-    );
-  }
-
-  if (phase === "result") {
-    const userWon = userScore > cpuScore;
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-950 text-zinc-100">
-        <h1 className="text-3xl font-bold mb-4">{userWon ? "승리!" : "패배!"}</h1>
-        <p className="text-zinc-400 mb-8">
-          최종 스코어 {userScore} : {cpuScore}
-        </p>
-        <button
-          onClick={() => {
-            setPhase("rps");
-            setRpsResult(null);
-          }}
-          className="px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
-        >
-          다시 하기
-        </button>
       </main>
     );
   }
@@ -431,6 +408,37 @@ export default function BlackWhitePage() {
           >
             컴퓨터가 선택함 (이제 당신이 타일을 선택하세요)
           </button>
+        )}
+
+        {phase === "result" && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            aria-modal
+            role="dialog"
+          >
+            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center">
+              <h2 className="text-2xl font-bold mb-2">
+                {userScore > cpuScore ? "승리!" : "패배!"}
+              </h2>
+              <p className="text-zinc-300 mb-6">
+                {userScore > cpuScore
+                  ? "축하합니다! 당신이 이겼습니다."
+                  : "아쉽습니다. 다음에는 이겨보세요!"}
+              </p>
+              <p className="text-zinc-500 text-sm mb-6">
+                최종 스코어 {userScore} : {cpuScore}
+              </p>
+              <button
+                onClick={() => {
+                  setPhase("rps");
+                  setRpsResult(null);
+                }}
+                className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium"
+              >
+                다시 하기
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </main>
