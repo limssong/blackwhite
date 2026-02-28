@@ -370,7 +370,7 @@ export default function BlackWhitePage() {
               </div>
             </div>
             <div className="mb-3">
-              <p className="text-xs text-zinc-500 mb-1">남은 타일 (유추)</p>
+              <p className="text-xs text-zinc-500 mb-1">남은 타일</p>
               <div className="flex gap-2 text-sm">
                 <span className="flex items-center gap-1">
                   <span className="w-6 h-6 rounded bg-zinc-800 border border-zinc-600 inline-flex items-center justify-center text-zinc-100 text-xs">흑</span>
@@ -384,16 +384,21 @@ export default function BlackWhitePage() {
             </div>
             <div className="mt-3">
               <p className="text-xs text-zinc-500 mb-1">선택한 타일의 색상</p>
-              {roundPhase !== "select" && (cpuSelected !== null || cpuFirstTile !== null) ? (
-                <span
-                  className={cn(
-                    "inline-flex w-12 h-12 rounded-lg border-2 flex items-center justify-center font-bold text-sm",
-                    getTileColor((cpuSelected ?? cpuFirstTile)!) === "black"
-                      ? "bg-zinc-800 text-zinc-100 border-zinc-600"
-                      : "bg-zinc-200 text-zinc-800 border-zinc-400"
-                  )}
-                >
-                  {getTileColor((cpuSelected ?? cpuFirstTile)!) === "black" ? "흑" : "백"}
+              {(cpuSelected !== null || cpuFirstTile !== null) ? (
+                <span className="inline-flex flex-col items-center gap-0.5">
+                  <span
+                    className={cn(
+                      "inline-flex w-12 h-12 rounded-lg border-2 font-bold text-lg items-center justify-center",
+                      getTileColor((cpuSelected ?? cpuFirstTile)!) === "black"
+                        ? "bg-zinc-800 text-zinc-100 border-zinc-600"
+                        : "bg-zinc-200 text-zinc-800 border-zinc-400"
+                    )}
+                  >
+                    {getTileColor((cpuSelected ?? cpuFirstTile)!) === "black" ? "흑" : "백"}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {getTileColor((cpuSelected ?? cpuFirstTile)!) === "black" ? "흑" : "백"}
+                  </span>
                 </span>
               ) : (
                 <span className="inline-flex w-12 h-12 rounded-lg border-2 border-dashed border-zinc-600 items-center justify-center text-zinc-500 text-sm">
@@ -440,7 +445,7 @@ export default function BlackWhitePage() {
             }}
             className="mx-auto block mt-4 px-6 py-3 rounded-lg bg-zinc-700 hover:bg-zinc-600"
           >
-            컴퓨터가 선택함 (이제 당신이 타일을 선택하세요)
+            컴퓨터의 타일 선택
           </button>
         )}
 
