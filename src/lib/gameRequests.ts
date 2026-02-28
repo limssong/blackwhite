@@ -11,7 +11,7 @@ import {
   where,
   serverTimestamp,
 } from "firebase/firestore";
-import { createInitialState } from "./pvpGame";
+import { createInitialState, startPvpGame } from "./pvpGame";
 
 export type GameRequestStatus = "pending" | "accepted" | "rejected";
 
@@ -96,7 +96,8 @@ export async function acceptGameRequest(
   if (!data || data.status !== "pending") return null;
 
   const gameId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const state = createInitialState();
+  const initialState = createInitialState();
+  const state = startPvpGame(initialState);
   await setDoc(doc(fb.db, GAMES_COLLECTION, gameId), {
     player1Id: data.fromUserId,
     player1Ip: data.fromUserIp,
