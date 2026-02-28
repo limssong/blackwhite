@@ -67,20 +67,20 @@ pnpm lint
 1. [Firebase Console](https://console.firebase.google.com/)에서 프로젝트 생성
 2. **Firestore Database** 생성 (테스트 모드로 시작 가능)
 3. **설정 → 일반 → 앱**에서 웹 앱 추가 후 나온 설정값 복사
-4. 프로젝트 루트에 `.env.local` 생성 후 아래 변수 채우기 (`.env.example` 참고)
+4. **로컬 개발** 시: 프로젝트 루트에 `.env.local` 생성 후 아래 변수 채우기 (`.env.example` 참고).
 
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-```
+5. **GitHub Pages 배포** 시: 저장소에서 **Settings → Secrets and variables → Actions** 이동 후 **New repository secret**으로 아래 6개를 각각 추가. (이름은 정확히 맞춰야 함.)
+   - `NEXT_PUBLIC_FIREBASE_API_KEY` → Firebase API 키 값
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` → auth 도메인
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID` → 프로젝트 ID
+   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` → 스토리지 버킷
+   - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` → 메시징 발신자 ID
+   - `NEXT_PUBLIC_FIREBASE_APP_ID` → 앱 ID  
+   추가 후 `main`에 푸시하면 빌드 시 이 값들이 사용되어, GitHub Pages(https://limssong.github.io/blackwhite/)에서도 2인 모드가 동작합니다.
 
-5. **사람 vs 사람** 선택 시 로비에 접속되며, **현재 접속 중인 사용자 목록(IP)**이 표시됩니다.  
+6. **사람 vs 사람** 선택 시 로비에 접속되며, **현재 접속 중인 사용자 목록(IP)**이 표시됩니다.  
    (IP는 [ipify](https://www.ipify.org/) API로 조회됩니다.)
-6. **Firestore 보안 규칙** 설정 (아래 참고).
+7. **Firestore 보안 규칙** 설정 (아래 참고).
 
 ---
 
