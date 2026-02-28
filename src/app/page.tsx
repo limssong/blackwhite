@@ -4,8 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { cn, TILES, type Tile, getTileColor } from "@/lib/utils";
 import { useLobby } from "@/lib/useLobby";
 import {
-  createWaitingGame,
-  findWaitingGame,
   joinGame,
   subscribeToGame,
   updateGameState,
@@ -13,8 +11,15 @@ import {
   applyPvpTileSelect,
   applyPvpNextRound,
   type PvpGameDoc,
-  type PvpGameState,
 } from "@/lib/pvpGame";
+import {
+  createGameRequest,
+  subscribeToIncomingRequests,
+  subscribeToSentRequests,
+  acceptGameRequest,
+  rejectGameRequest,
+  type GameRequestDoc,
+} from "@/lib/gameRequests";
 
 type RPS = "가위" | "바위" | "보";
 const RPS_OPTIONS: RPS[] = ["가위", "바위", "보"];
@@ -73,7 +78,8 @@ export default function BlackWhitePage() {
   const lobby = useLobby();
   const [pvpGameId, setPvpGameId] = useState<string | null>(null);
   const [pvpGameData, setPvpGameData] = useState<PvpGameDoc | null>(null);
-  const [pvpMatchLoading, setPvpMatchLoading] = useState(false);
+  const [incomingRequests, setIncomingRequests] = useState<{ id: string; data: GameRequestDoc }[]>([]);
+  const [requestLoading, setRequestLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (phase !== "pvpLobby") return;
@@ -81,28 +87,59 @@ export default function BlackWhitePage() {
     return () => lobby.leaveLobby();
   }, [phase]);
 
-  const handlePvpCreateOrJoin = useCallback(async () => {
-    if (!lobby.myId || !lobby.myIp) return;
-    setPvpMatchLoading(true);
-    try {
-      const existingGameId = await findWaitingGame(lobby.myId);
-      if (existingGameId) {
-        const ok = await joinGame(existingGameId, lobby.myId, lobby.myIp!);
-        if (ok) {
-          setPvpGameId(existingGameId);
-          setPhase("pvpGame");
-        }
-      } else {
-        const gameId = await createWaitingGame(lobby.myId, lobby.myIp);
+  useEffect(() => {
+    if (phase !== "pvpLobby" || !lobby.myId) return;
+    const unsub = subscribeToIncomingRequests(lobby.myId, setIncomingRequests);
+    return unsub;
+  }, [phase, lobby.myId]);
+
+  useEffect(() => {
+    if (phase !== "pvpLobby" || !lobby.myId) return;
+    const unsub = subscribeToSentRequests(lobby.myId, (gameId) => {
+      setPvpGameId(gameId);
+      setPhase("pvpGame");
+    });
+    return unsub;
+  }, [phase, lobby.myId]);
+
+  const handleSendRequest = useCallback(
+    async (toUserId: string, toUserIp: string) => {
+      if (!lobby.myId || !lobby.myIp) return;
+      setRequestLoading(toUserId);
+      try {
+        await createGameRequest(lobby.myId, lobby.myIp, toUserId, toUserIp);
+      } finally {
+        setRequestLoading(null);
+      }
+    },
+    [lobby.myId, lobby.myIp]
+  );
+
+  const handleAcceptRequest = useCallback(
+    async (requestId: string) => {
+      if (!lobby.myId || !lobby.myIp) return;
+      setRequestLoading(requestId);
+      try {
+        const gameId = await acceptGameRequest(requestId, lobby.myId, lobby.myIp);
         if (gameId) {
           setPvpGameId(gameId);
           setPhase("pvpGame");
         }
+      } finally {
+        setRequestLoading(null);
       }
+    },
+    [lobby.myId, lobby.myIp]
+  );
+
+  const handleRejectRequest = useCallback(async (requestId: string) => {
+    setRequestLoading(requestId);
+    try {
+      await rejectGameRequest(requestId);
     } finally {
-      setPvpMatchLoading(false);
+      setRequestLoading(null);
     }
-  }, [lobby.myId, lobby.myIp]);
+  }, []);
 
   useEffect(() => {
     if (phase !== "pvpGame" || !pvpGameId) return;
@@ -297,27 +334,58 @@ export default function BlackWhitePage() {
             {lobby.loading ? (
               <p className="text-zinc-500 text-sm">로비 접속 중...</p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {lobby.onlineUsers.length === 0 ? (
                   <li className="text-zinc-500 text-sm">접속 중인 사용자가 없습니다.</li>
                 ) : (
                   lobby.onlineUsers.map((u) => (
-                    <li key={u.id} className="flex items-center gap-2 text-sm">
+                    <li key={u.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className="font-mono text-zinc-300">{u.ip}</span>
-                      {u.id === lobby.myId && <span className="text-zinc-500 text-xs">(나)</span>}
+                      {u.id === lobby.myId ? (
+                        <span className="text-zinc-500 text-xs">(나)</span>
+                      ) : (
+                        <button
+                          onClick={() => handleSendRequest(u.id, u.ip)}
+                          disabled={!lobby.isConfigured || !!requestLoading}
+                          className="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-medium"
+                        >
+                          {requestLoading === u.id ? "신청 중..." : "게임 신청"}
+                        </button>
+                      )}
                     </li>
                   ))
                 )}
               </ul>
             )}
           </div>
-          <button
-            onClick={handlePvpCreateOrJoin}
-            disabled={!lobby.isConfigured || lobby.loading || pvpMatchLoading}
-            className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-medium"
-          >
-            {pvpMatchLoading ? "매칭 중..." : "상대 찾기 / 방 만들기"}
-          </button>
+          {incomingRequests.length > 0 && (
+            <div className="rounded-lg bg-zinc-800/50 border border-zinc-600 p-4 mb-6">
+              <p className="text-zinc-400 text-sm mb-2">받은 게임 신청</p>
+              <ul className="space-y-2">
+                {incomingRequests.map(({ id, data }) => (
+                  <li key={id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-mono text-zinc-300">{data.fromUserIp}</span>
+                    <span className="flex gap-2">
+                      <button
+                        onClick={() => handleAcceptRequest(id)}
+                        disabled={!!requestLoading}
+                        className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium"
+                      >
+                        {requestLoading === id ? "처리 중..." : "수락"}
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(id)}
+                        disabled={!!requestLoading}
+                        className="px-3 py-1.5 rounded bg-zinc-600 hover:bg-zinc-500 disabled:opacity-50 text-white text-xs font-medium"
+                      >
+                        거절
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </main>
     );

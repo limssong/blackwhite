@@ -86,7 +86,7 @@ pnpm lint
 
 ## Firestore 보안 규칙 설정
 
-`lobby`, `games`는 **앱이 사용하는 컬렉션 이름**이라, 앱에서 로비/게임을 한 번이라도 사용하기 전에는 Firebase 콘솔 **데이터** 탭에 안 보입니다. 규칙만 먼저 설정하면 됩니다.
+`lobby`, `games`, `gameRequests`는 **앱이 사용하는 컬렉션 이름**이라, 앱에서 로비/게임/게임 신청을 한 번이라도 사용하기 전에는 Firebase 콘솔 **데이터** 탭에 안 보입니다. 규칙만 먼저 설정하면 됩니다.
 
 1. [Firebase Console](https://console.firebase.google.com/) → 프로젝트 선택
 2. 왼쪽 메뉴에서 **Firestore Database** 클릭
@@ -104,11 +104,14 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read, write: if true;
     }
+    match /gameRequests/{requestId} {
+      allow read, write: if true;
+    }
   }
 }
 ```
 
-- 이 규칙은 **개발/테스트용**으로, 누구나 `lobby`, `games`를 읽고 쓸 수 있습니다.
+- 이 규칙은 **개발/테스트용**으로, 누구나 `lobby`, `games`, `gameRequests`를 읽고 쓸 수 있습니다.
 - 나중에 인증(로그인)을 붙이면 `if request.auth != null` 등으로 제한할 수 있습니다.
 
 프로젝트 루트의 `firestore.rules` 파일에도 같은 내용이 있습니다.

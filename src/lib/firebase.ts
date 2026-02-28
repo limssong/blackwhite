@@ -33,6 +33,7 @@ export function isFirebaseConfigured(): boolean {
 
 export const LOBBY_COLLECTION = "lobby";
 export const GAMES_COLLECTION = "games";
+export const GAME_REQUESTS_COLLECTION = "gameRequests";
 const HEARTBEAT_INTERVAL_MS = 5000;
 const OFFLINE_THRESHOLD_MS = 30000;
 

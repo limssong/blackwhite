@@ -10,5 +10,9 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read, write: if true;
     }
+    // 게임 신청: IP 선택 후 신청/수락/거절 (읽기/쓰기 허용)
+    match /gameRequests/{requestId} {
+      allow read, write: if true;
+    }
   }
 }
