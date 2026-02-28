@@ -96,7 +96,7 @@ export default function BlackWhitePage() {
         else if (c > u) result = "lose";
         setRoundResult(result);
         setUserScore((s) => s + (result === "win" ? 1 : 0));
-        setCpuScore((s) => s + (result === "lose" ? 0 : 1));
+        setCpuScore((s) => s + (result === "lose" ? 1 : 0));
         setUserUsed((prev) => new Set(prev).add(userTile));
         setCpuUsed((prev) => new Set(prev).add(cpuTile));
         setCpuPlayedColors((prev) => [...prev, getTileColor(cpuTile)]);
@@ -115,6 +115,14 @@ export default function BlackWhitePage() {
     setCpuFirstTile(null);
     const nextFirst = roundResult === "win" ? true : roundResult === "lose" ? false : isUserTurn;
     setIsUserTurn(nextFirst);
+
+    const newUserScore = userScore + (roundResult === "win" ? 1 : 0);
+    const newCpuScore = cpuScore + (roundResult === "lose" ? 1 : 0);
+    if (newUserScore >= 5 || newCpuScore >= 5) {
+      setGameOver(true);
+      setPhase("result");
+      return;
+    }
 
     if (round + 1 >= 9) {
       const u = userScore + (roundResult === "win" ? 1 : 0);
@@ -158,7 +166,7 @@ export default function BlackWhitePage() {
         else if (c > u) result = "lose";
         setRoundResult(result);
         setUserScore((s) => s + (result === "win" ? 1 : 0));
-        setCpuScore((s) => s + (result === "lose" ? 0 : 1));
+        setCpuScore((s) => s + (result === "lose" ? 1 : 0));
         setUserUsed((prev) => new Set(prev).add(userTile));
         setCpuUsed((prev) => new Set(prev).add(cpuFirstTile));
         setCpuPlayedColors((prev) => [...prev, getTileColor(cpuFirstTile)]);
