@@ -37,6 +37,7 @@ export default function BlackWhitePage() {
   const [cpuFirstTile, setCpuFirstTile] = useState<Tile | null>(null);
   const [cpuPlayedColors, setCpuPlayedColors] = useState<("black" | "white")[]>([]);
   const [userPlayedTiles, setUserPlayedTiles] = useState<Tile[]>([]);
+  const [roundResults, setRoundResults] = useState<("win" | "lose" | "draw")[]>([]);
 
   const startRps = useCallback(() => {
     setPhase("rps");
@@ -73,6 +74,7 @@ export default function BlackWhitePage() {
     setSuddenDeath(false);
     setCpuPlayedColors([]);
     setUserPlayedTiles([]);
+    setRoundResults([]);
   }, [rpsResult, userFirst]);
 
   const playRound = useCallback(
@@ -101,6 +103,7 @@ export default function BlackWhitePage() {
         setCpuUsed((prev) => new Set(prev).add(cpuTile));
         setCpuPlayedColors((prev) => [...prev, getTileColor(cpuTile)]);
         setUserPlayedTiles((prev) => [...prev, userTile]);
+        setRoundResults((prev) => [...prev, result]);
         setRoundPhase("done");
       }, 600);
     },
@@ -144,6 +147,7 @@ export default function BlackWhitePage() {
         setIsUserTurn(Math.random() > 0.5);
         setCpuPlayedColors([]);
         setUserPlayedTiles([]);
+        setRoundResults([]);
       }
       return;
     }
@@ -169,6 +173,7 @@ export default function BlackWhitePage() {
         setCpuUsed((prev) => new Set(prev).add(cpuFirstTile));
         setCpuPlayedColors((prev) => [...prev, getTileColor(cpuFirstTile)]);
         setUserPlayedTiles((prev) => [...prev, userTile]);
+        setRoundResults((prev) => [...prev, result]);
         setRoundPhase("done");
       }, 600);
     },
@@ -291,6 +296,20 @@ export default function BlackWhitePage() {
                         {tile}
                       </span>
                       <span className="text-[10px] text-zinc-500">{i + 1}라운드</span>
+                      {roundResults[i] !== undefined && (
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium",
+                            roundResults[i] === "win" && "text-green-500",
+                            roundResults[i] === "lose" && "text-red-500",
+                            roundResults[i] === "draw" && "text-zinc-500"
+                          )}
+                        >
+                          {roundResults[i] === "win" && "승리"}
+                          {roundResults[i] === "lose" && "패배"}
+                          {roundResults[i] === "draw" && "무승부"}
+                        </span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -304,18 +323,33 @@ export default function BlackWhitePage() {
             <p className="text-sm text-zinc-400 mb-2">컴퓨터의 타일</p>
             <div className="mb-3">
               <p className="text-xs text-zinc-500 mb-1">지금까지 낸 타일 (라운드별)</p>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2">
                 {cpuPlayedColors.map((color, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "w-8 h-8 rounded border flex items-center justify-center text-xs font-medium",
-                      color === "black"
-                        ? "bg-zinc-800 text-zinc-100 border-zinc-600"
-                        : "bg-zinc-200 text-zinc-800 border-zinc-400"
+                  <span key={i} className="flex flex-col items-center gap-0.5">
+                    <span
+                      className={cn(
+                        "w-8 h-8 rounded border flex items-center justify-center text-xs font-medium",
+                        color === "black"
+                          ? "bg-zinc-800 text-zinc-100 border-zinc-600"
+                          : "bg-zinc-200 text-zinc-800 border-zinc-400"
+                      )}
+                    >
+                      {color === "black" ? "흑" : "백"}
+                    </span>
+                    {roundResults[i] !== undefined && (
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium",
+                          roundResults[i] === "lose" && "text-green-500",
+                          roundResults[i] === "win" && "text-red-500",
+                          roundResults[i] === "draw" && "text-zinc-500"
+                        )}
+                      >
+                        {roundResults[i] === "win" && "패배"}
+                        {roundResults[i] === "lose" && "승리"}
+                        {roundResults[i] === "draw" && "무승부"}
+                      </span>
                     )}
-                  >
-                    {color === "black" ? "흑" : "백"}
                   </span>
                 ))}
                 {currentCpuColor !== null && roundPhase !== "done" && (
