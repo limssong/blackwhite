@@ -82,7 +82,7 @@ pnpm lint
    (IP는 [ipify](https://www.ipify.org/) API로 조회됩니다.)
 7. **Firestore 보안 규칙** 설정 (아래 참고).
 
----
+----
 
 ## Firestore 보안 규칙 설정
 
