@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { cn, TILES, type Tile, getTileColor } from "@/lib/utils";
 import { useLobby } from "@/lib/useLobby";
 import {
@@ -81,10 +81,14 @@ export default function BlackWhitePage() {
   const [incomingRequests, setIncomingRequests] = useState<{ id: string; data: GameRequestDoc }[]>([]);
   const [requestLoading, setRequestLoading] = useState<string | null>(null);
 
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
   useEffect(() => {
     if (phase !== "pvpLobby") return;
     lobby.enterLobby();
-    return () => lobby.leaveLobby();
+    return () => {
+      lobby.leaveLobby({ clearId: phaseRef.current === "pvpGame" ? false : undefined });
+    };
   }, [phase]);
 
   useEffect(() => {

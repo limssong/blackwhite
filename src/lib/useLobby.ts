@@ -33,7 +33,7 @@ export function useLobby() {
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
 
-  const leaveLobby = useCallback(() => {
+  const leaveLobby = useCallback((opts?: { clearId?: boolean }) => {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
       heartbeatRef.current = null;
@@ -46,8 +46,10 @@ export function useLobby() {
     if (fb && myId) {
       deleteDoc(doc(fb.db, LOBBY_COLLECTION, myId)).catch(() => {});
     }
-    setMyId(null);
-    setOnlineUsers([]);
+    if (opts?.clearId !== false) {
+      setMyId(null);
+      setOnlineUsers([]);
+    }
   }, [myId]);
 
   const enterLobby = useCallback(async () => {
