@@ -333,8 +333,17 @@ export default function BlackWhitePage() {
           {lobby.error && (
             <p className="text-red-400 text-sm mb-4">{lobby.error}</p>
           )}
+          {(() => {
+            const sortedById = [...lobby.onlineUsers].sort((a, b) => a.id.localeCompare(b.id));
+            const displayNameByUserId: Record<string, string> = {};
+            sortedById.forEach((u, i) => {
+              displayNameByUserId[u.id] = u.id === lobby.myId ? "나" : `user${i + 1}`;
+            });
+            const getDisplayName = (userId: string) => displayNameByUserId[userId] ?? "게임 신청자";
+            return (
+              <>
           <div className="rounded-lg bg-zinc-800/50 border border-zinc-600 p-4 mb-6">
-            <p className="text-zinc-400 text-sm mb-2">현재 접속 중인 사용자 (IP)</p>
+            <p className="text-zinc-400 text-sm mb-2">현재 접속 중인 사용자</p>
             {lobby.loading ? (
               <p className="text-zinc-500 text-sm">로비 접속 중...</p>
             ) : (
@@ -344,7 +353,7 @@ export default function BlackWhitePage() {
                 ) : (
                   lobby.onlineUsers.map((u) => (
                     <li key={u.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="font-mono text-zinc-300">{u.ip}</span>
+                      <span className="font-mono text-zinc-300">{getDisplayName(u.id)}</span>
                       {u.id === lobby.myId ? (
                         <span className="text-zinc-500 text-xs">(나)</span>
                       ) : (
@@ -368,7 +377,7 @@ export default function BlackWhitePage() {
               <ul className="space-y-2">
                 {incomingRequests.map(({ id, data }) => (
                   <li key={id} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-mono text-zinc-300">{data.fromUserIp}</span>
+                    <span className="font-mono text-zinc-300">{getDisplayName(data.fromUserId)}</span>
                     <span className="flex gap-2">
                       <button
                         onClick={() => handleAcceptRequest(id)}
@@ -390,6 +399,9 @@ export default function BlackWhitePage() {
               </ul>
             </div>
           )}
+              </>
+            );
+          })()}
         </div>
       </main>
     );
