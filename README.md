@@ -69,7 +69,10 @@ pnpm lint
 3. **설정 → 일반 → 앱**에서 웹 앱 추가 후 나온 설정값 복사
 4. **로컬 개발** 시: 프로젝트 루트에 `.env.local` 생성 후 아래 변수 채우기 (`.env.example` 참고).
 
-5. **GitHub Pages 배포** 시: 저장소에서 **Settings → Secrets and variables → Actions** 이동 후 **New repository secret**으로 아래 6개를 각각 추가. (이름은 정확히 맞춰야 함.)
+5. (선택) Google Analytics 4(GA)를 쓰고 싶다면 `.env.local`에 아래 변수를 추가합니다.
+   - `NEXT_PUBLIC_GA_MEASUREMENT_ID` → GA4 측정 ID (예: `G-2T5J1SNYXV`)
+
+6. **GitHub Pages 배포** 시: 저장소에서 **Settings → Secrets and variables → Actions** 이동 후 **New repository secret**으로 아래 6개를 각각 추가. (이름은 정확히 맞춰야 함.)
    - `NEXT_PUBLIC_FIREBASE_API_KEY` → Firebase API 키 값
    - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` → auth 도메인
    - `NEXT_PUBLIC_FIREBASE_PROJECT_ID` → 프로젝트 ID
@@ -78,9 +81,9 @@ pnpm lint
    - `NEXT_PUBLIC_FIREBASE_APP_ID` → 앱 ID  
    추가 후 `main`에 푸시하면 빌드 시 이 값들이 사용되어, GitHub Pages(https://limssong.github.io/blackwhite/)에서도 2인 모드가 동작합니다.
 
-6. **사람 vs 사람** 선택 시 로비에 접속되며, **현재 접속 중인 사용자 목록(IP)**이 표시됩니다.  
+7. **사람 vs 사람** 선택 시 로비에 접속되며, **현재 접속 중인 사용자 목록(IP)**이 표시됩니다.  
    (IP는 [ipify](https://www.ipify.org/) API로 조회됩니다.)
-7. **Firestore 보안 규칙** 설정 (아래 참고).
+8. **Firestore 보안 규칙** 설정 (아래 참고).
 
 ----
 
